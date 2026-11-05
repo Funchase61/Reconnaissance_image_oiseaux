@@ -13,9 +13,9 @@ On avance comme un explorateur : on part de l'idée la plus bête possible, puis
 3. **Baseline** : le score de l'idée la plus bête (0,19 %). *Fait.*
 4. **Petit réseau parti de zéro** sur ton ordinateur (78,8 %). *Fait.*
 5. **Comparer 4 gros modèles déjà entraînés**, sans les modifier (linear probe). *Fait : DINOv2 gagne avec 99,3 %.*
-6. **Ajuster le meilleur** des quatre sur nos oiseaux (fine-tuning). *En cours sur la carte graphique louée (environ 1 h 50).*
-7. **Mesurer** sur la validation, puis **une seule fois** sur le test. *À venir.*
-8. **Comprendre les erreurs** et écrire les limites. *À venir.*
+6. **Ajuster le meilleur** des quatre sur nos oiseaux (fine-tuning). *Fait : 99,43 % en validation.*
+7. **Mesurer** sur la validation, puis **une seule fois** sur le test. *Fait : 99,43 % ± 0,29 sur le test.*
+8. **Comprendre les erreurs** et écrire les limites. *Fait (notebook 03).*
 9. **Livrer** : le modèle, un programme qui l'utilise, les notebooks, la présentation. *En partie fait.*
 
 ## Ce que demande le sujet, et comment on le suit
@@ -32,13 +32,13 @@ Le sujet (slides 70 à 88 du cours) est suivi pour toute la méthode, avec trois
 | Dossiers data/train, val, test + metadata.csv + README | 80 | Exactement cette structure | Fait |
 | ImageFolder, mêmes classes partout, afficher un batch | 81 | Vérifié dans le notebook 01 | Fait |
 | Augmentations seulement sur le train | 81 | Oui, partout | Fait |
-| Baseline, puis petit CNN, puis transfer learning | 82 | 0,19 %, puis 78,8 %, puis 99,3 % (modèle gelé), fine-tuning en cours | En cours |
-| Examiner les erreurs de validation | 83 | Notebook 02 : 6 erreurs commentées, 2 étiquettes fausses trouvées | Fait pour le CNN |
-| Test consulté une seule fois | 85 | Le programme refuse une deuxième évaluation | Prêt |
-| Modèle rechargeable avec preprocessing et classes | 86 | Fichier best.pt + programme predict.py | Prêt |
-| Journal des essais | 86 | Tableau dans le README | En cours |
-| Fiche projet | 74 | Pas encore écrite | À faire |
-| Analyse, limites, prochaine expérience | 86 | Prévue | À faire |
+| Baseline, puis petit CNN, puis transfer learning | 82 | 0,19 %, puis 78,8 %, puis 99,3 % (modèle gelé), puis 99,43 % fine-tuné | Fait |
+| Examiner les erreurs de validation | 83 | Notebook 02 : 6 erreurs commentées, 2 étiquettes fausses trouvées | Fait (CNN et modèle final) |
+| Test consulté une seule fois | 85 | Le programme refuse une deuxième évaluation | Fait (99,43 %) |
+| Modèle rechargeable avec preprocessing et classes | 86 | Fichier best.pt + programme predict.py | Fait |
+| Journal des essais | 86 | Tableau dans le README | Fait |
+| Fiche projet | 74 | FICHE_PROJET.md | Fait |
+| Analyse, limites, prochaine expérience | 86 | Notebook 03 : erreurs classées, quasi-doublons, limites, prochaine expérience | Fait |
 | Présentation avec effectifs en pourcentages | 87 | Prévue | À faire |
 
 **Les trois écarts, et pourquoi on les garde :**
@@ -178,7 +178,7 @@ Le modèle final ne part **pas** de zéro : il part d'un grand modèle déjà en
 
 ## Pourquoi une carte graphique louée, et comment elle a été installée
 
-Les gros modèles demandent une carte graphique (GPU) : on en loue une, une NVIDIA L40S, sur RunPod à 1,09 $ de l'heure, pour environ 2 h 30 de calcul en tout.
+Les gros modèles demandent une carte graphique (GPU) : on en loue une, une NVIDIA L40S, sur RunPod à 1,09 $ de l'heure, pour environ 3 h 20 de pod en tout, soit environ 3,50 $.
 
 **Processeur ou carte graphique ?** Le processeur (CPU) de ton ordinateur est comme 6 cuisiniers très malins : ils savent tout faire, mais un par un. Une carte graphique, c'est des milliers de commis qui font tous la même opération simple en même temps. Or un réseau de neurones, c'est surtout des millions de multiplications toutes pareilles. Le GPU va des dizaines de fois plus vite. Un modèle de 300 millions de boutons prendrait des jours sur ton ordinateur ; sur la L40S, environ une heure.
 
@@ -235,6 +235,8 @@ Les 4 backbones pré-entraînés ont été mis à l'épreuve dans les mêmes con
 
 Le fine-tuning de DINOv2 a démarré à 14 h 59 (heure du serveur). Avant toute modification, la tête issue du linear probe donne bien 99,2 % : le départ est sain.
 
+*(Le graphique de toutes les marches est dans le document en ligne et dans le notebook 03.)* Le vrai saut vient du passage à un modèle pré-entraîné (+ 14 points dès ResNet18). Au-dessus de 98,9 %, les différences entre modèles sont de l'ordre de la marge d'erreur.
+
 ## Étape 6 : le fine-tuning, la recette ingrédient par ingrédient
 
 Le meilleur backbone de l'étape 5 est dégelé, et tous ses boutons sont ajustés très doucement pendant 12 epochs, avec une recette standard des meilleurs résultats publiés. Le programme est `scripts/finetune.py`, et il est choisi et lancé automatiquement.
@@ -265,6 +267,23 @@ Le principe : le modèle sait déjà très bien voir. On veut le spécialiser su
 
 **Ce qui a changé par rapport au premier plan.** Le premier document prévoyait un pas de 1e-5 et un decay de 0,75. Avec 24 couches, ça donnait aux couches du bas un pas d'environ 0,000000008, plus de 100 fois plus petit qu'avec la recette retenue : elles n'auraient presque pas bougé. On a pris 5e-5 et 0,85, les valeurs habituelles pour un ViT-Large.
 
+**Ce qui s'est passé (DINOv2, 12 epochs de 8 min 30 sur la L40S).**
+
+| Epoch | Modèle normal | Copie EMA |
+|---|---|---|
+| 1 | 97,22 % | 98,97 % |
+| 2 | 98,67 % | 99,01 % |
+| 4 | 98,86 % | 99,24 % |
+| 6 | 99,16 % | 99,35 % |
+| **8** | **99,43 %** | 99,39 % |
+| 10 | 99,43 % | 99,43 % |
+| 12 | 99,31 % | 99,35 % |
+
+- **Epoch 1 : une secousse.** Le modèle tombe sous le score du modèle gelé, parce qu'on commence à modifier tout le réseau avec le pas le plus grand. La copie EMA, elle, encaisse la secousse.
+- **Epochs 2 à 8 : remontée régulière**, jusqu'à 99,43 % (15 erreurs sur 2 625).
+- **Epochs 9 à 12 : plateau.** Le programme a gardé l'epoch 8 automatiquement.
+- **Gain du fine-tuning : + 0,15 point** sur le modèle gelé (4 erreurs de moins), dans la marge d'erreur. L'essentiel du travail était déjà fait par le pré-entraînement.
+
 ## Étapes 7 et 8 : mesurer, puis le test une seule fois
 
 Le modèle final est mesuré d'abord sur la validation, puis une seule et unique fois sur le test, et c'est ce score de test qui sera la note officielle, même s'il déçoit (slide 85).
@@ -281,11 +300,40 @@ Le modèle final est mesuré d'abord sur la validation, puis une seule et unique
 
 **Ordre des opérations.** On fige tout d'abord (le modèle, le prétraitement, le choix TTA ou non, décidé sur la validation). Ensuite seulement, on ouvre le test.
 
+**Ce qui a été figé avant d'ouvrir le test** (fichier `CHOIX_FIGE.txt`) : les poids de l'epoch 8, **sans TTA**. Sur la validation, la TTA faisait 99,35 % contre 99,43 % sans : elle n'aidait pas.
+
+| Tas | Accuracy | Marge (95 %) | Top-5 | Erreurs |
+|---|---|---|---|---|
+| Validation | 99,43 % | ± 0,29 | 100 % | 15 sur 2 625 |
+| **Test (une seule fois)** | **99,43 %** | **± 0,29** | **100 %** | **15 sur 2 625** |
+
+Le score de test est identique à celui de validation : le modèle n'a pas été réglé « pour » la validation, il se comporte pareil sur des photos jamais vues. Rechargé sur ton ordinateur, sans carte graphique, le modèle donne les mêmes réponses (environ 1 minute de chargement, puis environ 1 seconde par photo).
+
 ## Analyse des erreurs et limites
 
-Un score de 99 % ne veut rien dire tout seul : l'analyse doit expliquer où le modèle se trompe, pourquoi, et dans quelles conditions il ne marcherait plus (slides 83, 86 et 87). Elle sera faite après le calcul sur la carte graphique, sur ton ordinateur.
+Un score de 99 % ne veut rien dire tout seul : l'analyse doit expliquer où le modèle se trompe, pourquoi, et dans quelles conditions il ne marcherait plus (slides 83, 86 et 87). Elle est faite dans le notebook `03_resultats.ipynb`, sur ton ordinateur, en regardant chacune des 30 erreurs (15 en validation, 15 en test).
 
-**Ce qu'on va regarder.**
+**Ce qu'on a trouvé sur les 15 erreurs du test :**
+
+| Type d'erreur | Nombre | Exemples | Ce que ça veut dire |
+|---|---|---|---|
+| Étiquette du dataset probablement fausse | 3 | « TEAL DUCK » qui montre un canard d'Amérique ; « BALTIMORE ORIOLE » dont **la même photo** est dans le train sous un autre nom ; « MCKAYS BUNTING » (un bruant blanc) qui montre un oiseau brun rayé | Le modèle a probablement raison. Personne ne peut « réussir » ces photos. |
+| Classe mal constituée | 3 | AUSTRAL CANASTERO : 3 photos de test sur 5 ratées, et ses photos de train mélangent des oiseaux d'allures très différentes | C'est la classe qui est incohérente, pas le modèle. |
+| Espèces très proches | 6 | Deux touracos confondus dans les deux sens, deux tragopans, deux martins-pêcheurs, deux trogons, deux colibris | Des erreurs « honnêtes », qu'un amateur ferait aussi. |
+| Photo difficile | 3 | Un jeune encore duveteux, un oiseau en vol vu de dessous, un cormoran au plumage inhabituel | Des poses et des âges rares dans le train, qui montre surtout des adultes posés de profil. |
+
+Environ **6 erreurs sur 15 viennent du dataset lui-même**, pas du modèle. Sans elles, le score serait proche de 99,7 %. En validation, on retrouve 3 étiquettes probablement fausses (APAPANE, TEAL DUCK, EUROPEAN GOLDFINCH) et des espèces proches (PURPLE FINCH confondu 3 fois avec HOUSE FINCH).
+
+**Les quasi-doublons entre train et test.** Pour chaque photo de test, on a cherché la photo du train la plus ressemblante.
+
+- **Il y a de vraies fuites.** 131 photos de test (5 %) ont dans le train **la même photo**, juste recadrée ou décalée. Le dataset ne respecte donc pas la règle des groupes de la slide 79.
+- **Mais elles ne gonflent pas le score.** Sur ces photos, l'accuracy n'est pas meilleure (96,9 %). Sur toutes les photos sans « jumeau » proche, elle reste à **99,5 %**. Le modèle réussit aussi bien sur des photos vraiment nouvelles : le score est crédible.
+
+**Le modèle sait-il quand il ne sait pas ?** Plutôt, oui. Sa confiance moyenne est de 89 % quand il a raison, et de 53 % quand il se trompe. Quand il est sûr à plus de 50 %, il a raison dans 99,7 % des cas.
+
+**La prochaine expérience** (une seule modification justifiée, comme le demande le cours) : nettoyer le dataset (retirer les doublons train/test, corriger les étiquettes fausses, vérifier la classe AUSTRAL CANASTERO), puis réentraîner et mesurer sur un nouveau test indépendant, et sur nos propres photos.
+
+**Ce qu'on a regardé.**
 
 1. **Les erreurs les plus sûres d'elles.** Comme pour le petit CNN : la photo, la réponse, et une photo de l'espèce répondue. Est-ce une espèce proche ? Une étiquette fausse ? Un décor trompeur ?
 2. **Les étiquettes fausses.** On compte combien d'erreurs viennent en réalité d'une photo mal étiquetée (on en connaît déjà 2). Elles fixent un plafond que personne ne peut dépasser.
@@ -302,28 +350,28 @@ Un score de 99 % ne veut rien dire tout seul : l'analyse doit expliquer où le m
 
 ## Les livrables et ce qui reste à faire
 
-Les livrables techniques sont prêts ou en cours de calcul ; il reste surtout l'écrit : fiche projet, analyse et présentation (slide 86).
+Tous les livrables techniques et la fiche projet sont faits ; il reste la présentation, la question au professeur et le test sur tes propres photos (slide 86).
 
 | Livrable demandé | Fichier | État |
 |---|---|---|
 | Dataset documenté | `README.md`, `metadata.csv`, `classes.json` | Fait |
 | Notebook exécutable : exploration et baseline | `01_exploration_baseline.ipynb` | Fait |
 | Notebook exécutable : petit CNN | `02_petit_cnn.ipynb` | Fait |
-| Notebook des résultats GPU (comparaison, fine-tuning, test, analyse) | `03_resultats.ipynb` | À faire après le calcul |
-| Journal des essais | Tableau dans `README.md` | À compléter |
-| Modèle rechargeable (poids, prétraitement, classes) | `best.pt` | En calcul |
+| Notebook des résultats GPU (comparaison, fine-tuning, test, analyse) | `03_resultats.ipynb` | Fait |
+| Journal des essais | Tableau dans `README.md` | Fait |
+| Modèle rechargeable (poids, prétraitement, classes) | `best.pt` | Fait (600 Mo, sur ton ordinateur seulement : trop gros pour GitHub) |
 | Programme qui reconnaît un oiseau sur une photo | `scripts/predict.py` | Prêt, testé |
-| Fiche projet | à créer | À faire |
+| Fiche projet | `FICHE_PROJET.md` | Fait |
 | Présentation, avec effectifs et pourcentages | à créer | À faire |
 
 **Prochaines actions, dans l'ordre :**
 
-- [ ] Attendre la fin du fine-tuning (environ 1 h 50)
-- [ ] Lire le score de validation, puis lancer le test une seule fois
+- [x] Attendre la fin du fine-tuning (environ 1 h 50)
+- [x] Lire le score de validation, puis lancer le test une seule fois
 - [ ] Rapatrier les résultats sur ton ordinateur et supprimer le pod
 - [ ] Demander au professeur si un dataset déjà existant est accepté
-- [ ] Écrire la fiche projet
-- [ ] Faire l'analyse des erreurs et le notebook 03
+- [x] Écrire la fiche projet
+- [x] Faire l'analyse des erreurs et le notebook 03
 - [ ] Tester le modèle sur tes propres photos
 - [ ] Préparer la présentation
 

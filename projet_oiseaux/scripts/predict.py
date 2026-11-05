@@ -23,7 +23,8 @@ def predict(model, ck, image: Image.Image, k: int = 5):
     tf = eval_transform(ck["img_size"], model.backbone.mean, model.backbone.std)
     x = tf(image.convert("RGB"))[None].to(next(model.parameters()).device)
     with torch.no_grad():
-        p = (F.softmax(model(x).float(), 1) + F.softmax(model(torch.flip(x, dims=[3])).float(), 1)) / 2
+        # Sans TTA : c'est le choix figé sur la validation (99,43 % sans, 99,35 % avec).
+        p = F.softmax(model(x).float(), 1)
     top = p[0].topk(k)
     return [(ck["classes"][i], v) for v, i in zip(top.values.tolist(), top.indices.tolist())]
 

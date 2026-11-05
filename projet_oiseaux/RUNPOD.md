@@ -8,7 +8,7 @@ Ce guide fait les étapes 4 à 7 du projet sur une carte graphique louée :
 
 Tout est automatique. Tu lances une commande et tu reviens environ 2 heures plus tard.
 
-**Coût prévu** : environ 2 h 30 avec une L40S à 1,09 $/h, soit **3 $ environ**, plus quelques centimes de disque.
+**Coût réel (5 novembre 2026)** : environ 3 h 20 de pod L40S à 1,09 $/h, soit **environ 3,50 $**. Détail : installation 20 min (téléchargement lent depuis Hugging Face), comparaison des 4 backbones 52 min, fine-tuning 1 h 43 (12 epochs de 8 min 30), évaluation et rapatriement 15 min.
 
 Les scripts ont été testés sur le PC avec de petits modèles et 10 espèces : tout fonctionne de bout en bout. Seuls les gros modèles et le GPU n'ont pas pu être testés sur le PC.
 
@@ -82,7 +82,7 @@ Voici ce qui va défiler :
 Quand le journal affiche `== Terminé`, regarde le score de validation et envoie-le-moi. Si tout est cohérent, lance le test **une seule fois**. Le journal affiche la commande exacte, par exemple :
 
 ```bash
-python scripts/evaluate.py --ckpt outputs/finetune_bioclip2/best.pt --split test
+python scripts/evaluate.py --ckpt outputs/finetune_dinov2_l/best.pt --split test --no-tta
 ```
 
 Le script refuse de réévaluer le test une deuxième fois. C'est volontaire : le test doit rester l'examen final, pas un outil de réglage.

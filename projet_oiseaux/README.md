@@ -33,7 +33,10 @@ projet_oiseaux/
   classes.json                  les 525 espèces, dans l'ordre des labels
   01_exploration_baseline.ipynb étapes 1 et 2
   02_petit_cnn.ipynb            étape 3 : petit CNN partant de zéro
-  outputs/                      poids des modèles et cache (non versionnés)
+  03_resultats.ipynb            étapes 4 à 8 : comparaison, fine-tuning, test, analyse des erreurs
+  FICHE_PROJET.md               la fiche projet (slide 74)
+  DE_A_A_Z.md                   tout le projet expliqué de A à Z
+  outputs/                      poids des modèles, prédictions, vecteurs (non versionnés : best.pt fait 600 Mo)
 ```
 
 ## Recréer les données
@@ -56,4 +59,5 @@ Il faut environ 2 Go d'espace disque.
 | 4-5 | EVA-02 Large gelé + linear probe | 98,90 % (top-5 100 %) | |
 | 4-5 | BioCLIP 2 gelé + linear probe | 99,12 % (top-5 99,96 %) | |
 | 4-5 | **DINOv2 ViT-L gelé + linear probe** | **99,28 % ± 0,3** (top-5 99,92 %) | Gagnant ; écarts avec BioCLIP 2 et EVA-02 dans la marge d'erreur |
-| 6 | DINOv2 ViT-L fine-tuné (12 epochs, L40S) | en cours | |
+| 6 | DINOv2 ViT-L fine-tuné (12 epochs, L40S, 1 h 43) | 99,43 % ± 0,29 (top-5 100 %) | Meilleur à l'epoch 8 ; + 0,15 point sur le modèle gelé ; TTA inutile (99,35 %) |
+| 7 | **Test, consulté une seule fois** (epoch 8, sans TTA) | **99,43 % ± 0,29 sur le test** (top-5 100 %) | 15 erreurs, dont environ 6 dues au dataset (étiquettes fausses, classe AUSTRAL CANASTERO incohérente) |

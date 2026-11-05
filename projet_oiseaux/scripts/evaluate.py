@@ -38,6 +38,7 @@ def main():
     p.add_argument("--workers", type=int, default=8)
     p.add_argument("--smoke", action="store_true")
     p.add_argument("--force", action="store_true", help="réévaluer le test malgré tout")
+    p.add_argument("--no-tta", action="store_true", help="prédictions sans TTA (choix fait sur la validation)")
     args = p.parse_args()
 
     out = args.ckpt.parent
@@ -77,7 +78,8 @@ def main():
         margin = 1.96 * (acc * (1 - acc) / n) ** 0.5
         print(f"  {label} : accuracy {acc:.2%} (± {margin:.2%})   top-5 {top5:.2%}   erreurs : {int(round((1 - acc) * n))}")
 
-    pr = probs_tta
+    # Les fichiers de prédictions suivent le choix figé sur la validation (avec ou sans TTA).
+    pr = probs if args.no_tta else probs_tta
     conf, pred = pr.max(1)
     top5 = pr.topk(5, 1).indices
     df = pd.DataFrame({
@@ -92,7 +94,7 @@ def main():
     df.groupby("vraie")["correct"].mean().rename("recall").sort_values().to_csv(out / f"recall_{args.split}.csv")
     np.save(out / f"features_{args.split}.npy", feats.half().numpy())
     (out / f"scores_{args.split}.json").write_text(json.dumps({
-        "accuracy": float((pred == y).float().mean()), "n": n, "tta": True}, indent=1))
+        "accuracy": float((pred == y).float().mean()), "n": n, "tta": not args.no_tta}, indent=1))
     print(f"Fichiers écrits dans {out}")
 
 
