@@ -7,3 +7,6 @@ data/FashionMNIST/
 # Fichiers temporaires Jupyter / Python
 .ipynb_checkpoints/
 __pycache__/
+
+# Dataset oiseaux (1,9 Go) : trop gros pour GitHub
+data/birds_525/
