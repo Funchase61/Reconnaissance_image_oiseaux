@@ -1,0 +1,12 @@
+# Environnement Python (1,8 Go, se recrée avec requirements.txt)
+.venv/
+
+# Fashion-MNIST : 82 Mo, retéléchargé automatiquement par le TP7 (download=True)
+data/FashionMNIST/
+
+# Supports de cours de l'école (à ne pas publier)
+*.pptx
+
+# Fichiers temporaires Jupyter / Python
+.ipynb_checkpoints/
+__pycache__/
